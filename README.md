@@ -1,4 +1,4 @@
-# CoachCode.ai
+# CoachCode.ai 
 
 Placement preparation and coding practice platform — MERN stack with MySQL (Sequelize) and JWT role-based auth.
  
