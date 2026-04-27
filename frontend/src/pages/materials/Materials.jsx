@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -11,27 +12,23 @@ export default function Materials() {
   const [subjectId, setSubjectId] = useState("");
   const [search, setSearch] = useState("");
 
-  // Upload states
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [uploadSubjectId, setUploadSubjectId] = useState("");
   const [file, setFile] = useState(null);
 
-  // Fetch subjects
   useEffect(() => {
     api.get("/subjects")
       .then((r) => r.data.success && setSubjects(r.data.data))
       .catch(console.error);
   }, []);
 
-  // Fetch materials
   const fetchMaterials = () => {
     setLoading(true);
     const params = {};
     if (subjectId) params.subjectId = subjectId;
     if (search) params.search = search;
-
     api.get("/materials", { params })
       .then((r) => r.data.success && setMaterials(r.data.data))
       .catch(console.error)
@@ -42,48 +39,43 @@ export default function Materials() {
     fetchMaterials();
   }, [subjectId, search]);
 
-  // Upload function
-  const handleUpload = async () => {
-  try {
-    if (!title || !uploadSubjectId || !file) {
-      alert("Title, Subject and File are required.");
-      return;
+  const handleBookmark = async (id) => {
+    try {
+      await api.post("/bookmarks", { itemType: "material", itemId: id });
+      toast.success("Bookmarked!");
+    } catch {
+      toast.error("Already bookmarked!");
     }
+  };
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("subjectId", uploadSubjectId);
-    formData.append("file", file);
+  const handleUpload = async () => {
+    try {
+      if (!title || !uploadSubjectId || !file) {
+        alert("Title, Subject and File are required.");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("subjectId", uploadSubjectId);
+      formData.append("file", file);
+      const res = await api.post("/materials", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      console.log("UPLOAD RESPONSE:", res.data);
+      alert("Uploaded successfully ✅");
+      setOpen(false);
+      setTitle("");
+      setDescription("");
+      setUploadSubjectId("");
+      setFile(null);
+      fetchMaterials();
+    } catch (err) {
+      console.error("UPLOAD ERROR:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Upload failed ❌");
+    }
+  };
 
-    const res = await api.post("/materials", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    console.log("UPLOAD RESPONSE:", res.data);
-
-    alert("Uploaded successfully ✅");
-
-    setOpen(false);
-    setTitle("");
-    setDescription("");
-    setUploadSubjectId("");
-    setFile(null);
-
-    fetchMaterials();
-
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err.response?.data || err.message);
-
-    alert(
-      err.response?.data?.message ||
-      "Upload failed ❌"
-    );
-  }
-};
-  
   return (
     <div className="container">
       <h1>Materials</h1>
@@ -91,7 +83,6 @@ export default function Materials() {
         Subject-wise notes, previous year questions, and assignments.
       </p>
 
-      {/* Filters */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
         <select
           value={subjectId}
@@ -100,9 +91,7 @@ export default function Materials() {
         >
           <option value="">All subjects</option>
           {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
 
@@ -115,7 +104,6 @@ export default function Materials() {
         />
       </div>
 
-      {/* Upload Button */}
       {(user?.role === "faculty" || user?.role === "admin") && (
         <button
           onClick={() => setOpen(!open)}
@@ -133,25 +121,21 @@ export default function Materials() {
         </button>
       )}
 
-      {/* Upload Form */}
       {open && (
         <div className="card" style={{ marginBottom: "1rem" }}>
           <h3>Upload Material</h3>
-
           <input
             placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             style={{ display: "block", marginBottom: "0.5rem", width: "100%" }}
           />
-
           <textarea
             placeholder="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             style={{ display: "block", marginBottom: "0.5rem", width: "100%" }}
           />
-
           <select
             value={uploadSubjectId}
             onChange={(e) => setUploadSubjectId(e.target.value)}
@@ -159,56 +143,62 @@ export default function Materials() {
           >
             <option value="">Select Subject</option>
             {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
-
           <input
             type="file"
             accept=".pdf,.ppt,.pptx"
             onChange={(e) => setFile(e.target.files[0])}
             style={{ marginBottom: "0.5rem" }}
           />
-
           <button onClick={handleUpload}>Submit</button>
         </div>
       )}
 
-      {/* Material List */}
       {loading ? (
         <p>Loading...</p>
       ) : materials.length === 0 ? (
-        <div className="card">
-          No materials found.
-        </div>
+        <div className="card">No materials found.</div>
       ) : (
         <ul style={{ listStyle: "none", padding: 0 }}>
           {materials.map((m) => (
             <li key={m.id} className="card" style={{ marginBottom: "0.5rem" }}>
               <strong>{m.title}</strong>
-
               {m.Subject && (
                 <span style={{ color: "var(--text-muted)", marginLeft: "0.5rem" }}>
                   ({m.Subject.name})
                 </span>
               )}
-
               <p style={{ margin: "0.25rem 0 0", fontSize: "0.9rem" }}>
                 {m.description}
               </p>
-
-              {m.fileUrl && (
-                <a
-                  href={`http://localhost:5000${m.fileUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: "0.9rem" }}
+              <div style={{ display: "flex", alignItems: "center", marginTop: "0.5rem", gap: "0.5rem" }}>
+                {m.fileUrl && (
+                  <a
+                    href={`http://localhost:5000${m.fileUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "0.9rem" }}
+                  >
+                    Open file
+                  </a>
+                )}
+                <button
+                  onClick={() => handleBookmark(m.id)}
+                  style={{
+                    padding: "0.3rem 0.8rem",
+                    borderRadius: 6,
+                    background: "var(--warning)",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "0.85rem"
+                  }}
                 >
-                  Open file
-                </a>
-              )}
+                  🔖 Bookmark
+                </button>
+              </div>
             </li>
           ))}
         </ul>
