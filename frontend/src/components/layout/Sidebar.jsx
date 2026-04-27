@@ -32,10 +32,9 @@ const facultyNav = [
 
 const adminNav = [
   ...facultyNav,
+  { to: "/bookmarks", label: "Bookmarks" },
   { to: "/admin/users", label: "Manage Users" },
-  
 ];
-
 export default function Sidebar() {
   const { user } = useAuth();
 

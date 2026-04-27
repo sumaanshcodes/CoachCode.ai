@@ -4,8 +4,6 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { CardSkeleton } from "../../components/common/Skeleton";
 
-
-
 const LANGUAGES = [
   { id: "cpp", name: "C++" },
   { id: "python", name: "Python" },
@@ -137,31 +135,37 @@ export default function Practice() {
     loadSubmissions();
   }, [submissionFilter.questionId, submissionFilter.status, submissionFilter.language]);
 
+  // 🔖 BOOKMARK FUNCTION
+  const handleBookmark = async (id) => {
+    try {
+      await api.post("/bookmarks", { itemType: "question", itemId: id });
+      toast.success("Bookmarked!");
+    } catch {
+      toast.error("Already bookmarked!");
+    }
+  };
+
   const handleRun = async () => {
-  if (!selected?.id) return toast.error("Select a question first");
-
-  setRunning(true);
-  setOutput(null);
-  setRunError("");
-  setActiveTab("output");
-
-  try {
-    const { data } = await api.post(`/compiler/questions/${selected.id}/run`, {
-      code,
-      language,
-      stdin,
-    });
-
-    if (data.success) setOutput(data.data);
-    else toast.error(data.message || "Execution failed");
-
-  } catch (e) {
-    toast.error(e.response?.data?.message || "Execution failed");
-    setRunError(e.response?.data?.message || e.message);
-  } finally {
-    setRunning(false);
-  }
-};
+    if (!selected?.id) return toast.error("Select a question first");
+    setRunning(true);
+    setOutput(null);
+    setRunError("");
+    setActiveTab("output");
+    try {
+      const { data } = await api.post(`/compiler/questions/${selected.id}/run`, {
+        code,
+        language,
+        stdin,
+      });
+      if (data.success) setOutput(data.data);
+      else toast.error(data.message || "Execution failed");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Execution failed");
+      setRunError(e.response?.data?.message || e.message);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selected?.id) return toast.error("Select a question first");
@@ -252,8 +256,30 @@ export default function Practice() {
                     color: selected?.id === q.id ? "#fff" : "var(--text)",
                   }}
                 >
-                  <strong style={{ fontSize: 14 }}>{q.title}</strong>
-                  <span style={{ fontSize: 12, opacity: 0.8, marginLeft: 8 }}>{q.difficulty} · {q.topic || "General"} · {q.solved ? "Solved" : "Unsolved"}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <strong style={{ fontSize: 14 }}>{q.title}</strong>
+                      <span style={{ fontSize: 12, opacity: 0.8, marginLeft: 8 }}>
+                        {q.difficulty} · {q.topic || "General"} · {q.solved ? "✅ Solved" : "Unsolved"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleBookmark(q.id); }}
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        background: "var(--warning)",
+                        color: "#fff",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 11,
+                        flexShrink: 0,
+                        marginLeft: 8,
+                      }}
+                    >
+                      🔖
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -274,14 +300,7 @@ export default function Practice() {
             <div
               style={
                 isFullscreen
-                  ? {
-                      position: "fixed",
-                      inset: 0,
-                      zIndex: 40,
-                      background: "var(--surface)",
-                      display: "flex",
-                      flexDirection: "column",
-                    }
+                  ? { position: "fixed", inset: 0, zIndex: 40, background: "var(--surface)", display: "flex", flexDirection: "column" }
                   : { flex: 1, display: "flex", flexDirection: "column", minHeight: 200 }
               }
             >
@@ -315,11 +334,7 @@ export default function Practice() {
                   value={code}
                   onChange={(v) => setCode(v || "")}
                   theme="vs-dark"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize,
-                    padding: { top: 16 },
-                  }}
+                  options={{ minimap: { enabled: false }, fontSize, padding: { top: 16 } }}
                 />
               </div>
             </div>
@@ -329,17 +344,7 @@ export default function Practice() {
                 value={stdin}
                 onChange={(e) => setStdin(e.target.value)}
                 placeholder="Custom input (optional)"
-                style={{
-                  width: "100%",
-                  minHeight: 60,
-                  padding: 8,
-                  borderRadius: 6,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
-                  color: "var(--text)",
-                  fontSize: 13,
-                  resize: "vertical",
-                }}
+                style={{ width: "100%", minHeight: 60, padding: 8, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", fontSize: 13, resize: "vertical" }}
               />
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <button className={`btn ${activeTab === "testcases" ? "btn-primary" : ""}`} onClick={() => setActiveTab("testcases")}>Testcases</button>
@@ -352,7 +357,11 @@ export default function Practice() {
               {activeTab === "testcases" && (
                 <>
                   <h4 style={{ margin: "0 0 0.5rem", fontSize: 14 }}>Sample Testcases</h4>
-                  {loadingTestcases ? <div style={{ color: "var(--text-muted)" }}>Loading testcases...</div> : (!loadingTestcases && testcases.length === 0) ? <div style={{ color: "var(--text-muted)" }}>No sample testcases.</div> : (
+                  {loadingTestcases ? (
+                    <div style={{ color: "var(--text-muted)" }}>Loading testcases...</div>
+                  ) : testcases.length === 0 ? (
+                    <div style={{ color: "var(--text-muted)" }}>No sample testcases.</div>
+                  ) : (
                     testcases.map((tc, idx) => {
                       const result = output?.sampleResults?.[idx];
                       return (
@@ -411,33 +420,33 @@ export default function Practice() {
               {activeTab === "submissions" && (
                 <>
                   <h4 style={{ margin: "0 0 0.5rem", fontSize: 14 }}>My Submissions</h4>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                <select value={submissionFilter.questionId} onChange={(e) => setSubmissionFilter((p) => ({ ...p, questionId: e.target.value }))}>
-                  <option value="">All Questions</option>
-                  {questions.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
-                </select>
-                <select value={submissionFilter.status} onChange={(e) => setSubmissionFilter((p) => ({ ...p, status: e.target.value }))}>
-                  <option value="">All Status</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="wrong">Wrong</option>
-                  <option value="tle">TLE</option>
-                  <option value="error">Error</option>
-                </select>
-                <select value={submissionFilter.language} onChange={(e) => setSubmissionFilter((p) => ({ ...p, language: e.target.value }))}>
-                  <option value="">All Languages</option>
-                  {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "grid", gap: 6 }}>
-                {submissions.slice(0, 20).map((s) => (
-                  <div key={s.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 8, fontSize: 12 }}>
-                    <strong>{questionMap.get(s.questionId)?.title || s.Question?.title || `Question ${s.questionId}`}</strong>
-                    <div>{s.language} · {s.status} · {s.passedCount}/{s.totalCount}</div>
-                    <div style={{ color: "var(--text-muted)" }}>{new Date(s.createdAt).toLocaleString()}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                    <select value={submissionFilter.questionId} onChange={(e) => setSubmissionFilter((p) => ({ ...p, questionId: e.target.value }))}>
+                      <option value="">All Questions</option>
+                      {questions.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
+                    </select>
+                    <select value={submissionFilter.status} onChange={(e) => setSubmissionFilter((p) => ({ ...p, status: e.target.value }))}>
+                      <option value="">All Status</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="wrong">Wrong</option>
+                      <option value="tle">TLE</option>
+                      <option value="error">Error</option>
+                    </select>
+                    <select value={submissionFilter.language} onChange={(e) => setSubmissionFilter((p) => ({ ...p, language: e.target.value }))}>
+                      <option value="">All Languages</option>
+                      {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
                   </div>
-                ))}
-                {submissions.length === 0 && <div style={{ color: "var(--text-muted)" }}>No submissions yet.</div>}
-              </div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {submissions.slice(0, 20).map((s) => (
+                      <div key={s.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 8, fontSize: 12 }}>
+                        <strong>{questionMap.get(s.questionId)?.title || s.Question?.title || `Question ${s.questionId}`}</strong>
+                        <div>{s.language} · {s.status} · {s.passedCount}/{s.totalCount}</div>
+                        <div style={{ color: "var(--text-muted)" }}>{new Date(s.createdAt).toLocaleString()}</div>
+                      </div>
+                    ))}
+                    {submissions.length === 0 && <div style={{ color: "var(--text-muted)" }}>No submissions yet.</div>}
+                  </div>
                 </>
               )}
             </div>

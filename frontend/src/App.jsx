@@ -53,9 +53,7 @@ export default function App() {
         <Route
           path="notes"
           element={
-            <RoleRoute allowedRoles={["student"]}>
-              <Notes />
-            </RoleRoute>
+            <Bookmarks />
           }
         />
 
@@ -74,9 +72,7 @@ export default function App() {
         <Route
           path="bookmarks"
           element={
-            <RoleRoute allowedRoles={["student"]}>
-              <Bookmarks />
-            </RoleRoute>
+            <Bookmarks />
           }
         />
 
