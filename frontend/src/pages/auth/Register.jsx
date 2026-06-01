@@ -66,7 +66,7 @@ export default function Register() {
               style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)" }}>
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
-              <option value="admin">Admin</option>
+              
             </select>
           </div>
           <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={loading}>
